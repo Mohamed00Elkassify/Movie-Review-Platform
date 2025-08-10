@@ -1,4 +1,6 @@
-from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponse
+from django.shortcuts import render, get_object_or_404
 from django.views.generic import FormView, ListView, DetailView
 from .forms import RegisterForm, RatingForm
 from django.urls import reverse_lazy
@@ -78,5 +80,33 @@ class MovieDetailView(DetailView):
             context['in_watchlist'] = False
         
         return context
-            
-        
+
+
+class SubmitReviewView(LoginRequiredMixin, FormView):
+    form_class = RatingForm
+    template_name = 'reviewapp/submit_review.html'
+
+    def form_valid(self, form):
+        movie = get_object_or_404(Movie, pk=self.kwargs['pk'])
+        existing_review = Rating.objects.filter(user=self.request.user, movie=movie).first()
+        if existing_review:
+            existing_review.stars = form.cleaned_data['stars']
+            existing_review.comment = form.cleaned_data['comment']
+            existing_review.save()
+        else:
+            new_review = Rating(
+                user=self.request.user,
+                movie=movie,
+                stars=form.cleaned_data['stars'],
+                comment=form.cleaned_data['comment']
+            )
+            new_review.save()
+        return super().form_valid(form)
+watchlist
+class WatchlistView(LoginRequiredMixin, ListView):
+    template_name = 'reviewapp/watchlist.html'
+    context_object_name = 'movies'
+
+    def get_queryset(self):
+        return Movie.objects.filter(watchlist__user=self.request.user)
+    
