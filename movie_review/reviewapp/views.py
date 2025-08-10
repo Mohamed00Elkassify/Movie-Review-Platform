@@ -1,11 +1,10 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404
-from django.views.generic import FormView, ListView, DetailView
+from django.shortcuts import get_object_or_404
+from django.views.generic import FormView, ListView, DetailView, View
 from .forms import RegisterForm, RatingForm
 from django.urls import reverse_lazy
-from .models import Movie, Rating, Genre, Watchlist
-from django.db.models import Avg, Count
+from .models import Movie, Rating, Watchlist
+from django.db.models import Avg
 from datetime import date, timedelta
 # Create your views here.
 
@@ -19,6 +18,14 @@ class RegisterView(FormView):
         return super().form_valid(form)
 
 class MovieListView(ListView):
+    """
+    MovieListView:
+    A view to display a paginated list of movies with filtering, searching, and sorting options.
+    - Filters: genre, year, rating.
+    - Search: by movie title.
+    - Sorting: by rating or release date.
+    - Context: Includes top-rated movies released this week.
+    """
     model = Movie
     context_object_name = 'movies'
     template_name = 'reviewapp/movie_list.html'
@@ -60,6 +67,11 @@ class MovieListView(ListView):
         return context
     
 class MovieDetailView(DetailView):
+    """
+    View for displaying detailed information about a specific movie, 
+    including its reviews, average rating, and user-specific data 
+    such as review form and watchlist status.
+    """
     model = Movie
     template_name = 'reviewapp/movie_detail.html'
     context_object_name = 'movies'
@@ -83,6 +95,18 @@ class MovieDetailView(DetailView):
 
 
 class SubmitReviewView(LoginRequiredMixin, FormView):
+    """
+    SubmitReviewView handles the submission of movie reviews by authenticated users.
+    This view allows users to submit a rating and comment for a specific movie. If a review
+    already exists for the user and movie, it updates the existing review. Otherwise, it creates
+    a new review.
+    Attributes:
+        form_class (RatingForm): The form used to submit the review.
+        template_name (str): The template used to render the review submission page.
+    Methods:
+        form_valid(form):
+            Processes the valid form, updates or creates a review, and returns the response.
+    """
     form_class = RatingForm
     template_name = 'reviewapp/submit_review.html'
 
@@ -102,11 +126,44 @@ class SubmitReviewView(LoginRequiredMixin, FormView):
             )
             new_review.save()
         return super().form_valid(form)
-watchlist
+
+
+class WatchlistToggleview(LoginRequiredMixin, View):
+    """
+    View to toggle a movie's presence in the user's watchlist.
+
+    If the movie is already in the user's watchlist, it will be removed.
+    If the movie is not in the user's watchlist, it will be added.
+
+    Attributes:
+        LoginRequiredMixin: Ensures the user is authenticated before accessing the view.
+        View: Base class for handling HTTP GET requests.
+
+    Methods:
+        get(request, pk): Handles the GET request to toggle the watchlist entry for the specified movie.
+    """
+    def get(self, request, pk):
+        movie = get_object_or_404(Movie, pk=pk)
+        existing_entry = Watchlist.objects.filter(user=self.request.user, movie=movie).first()
+        if existing_entry:
+            existing_entry.delete()
+        else:
+            Watchlist.objects.create(user=self.request.user, movie=movie)
+
 class WatchlistView(LoginRequiredMixin, ListView):
+    """
+    View to display the watchlist of movies for the logged-in user.
+    Inherits:
+        LoginRequiredMixin: Ensures the user is authenticated to access the view.
+        ListView: Provides a list-based view for displaying objects.
+    Attributes:
+        template_name (str): Path to the template used for rendering the watchlist page.
+        context_object_name (str): Name of the context variable to access the movies in the template.
+    Methods:
+        get_queryset(): Retrieves the list of movies in the watchlist for the current user.
+    """
     template_name = 'reviewapp/watchlist.html'
     context_object_name = 'movies'
 
     def get_queryset(self):
         return Movie.objects.filter(watchlist__user=self.request.user)
-    
