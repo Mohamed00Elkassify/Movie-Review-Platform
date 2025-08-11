@@ -1,0 +1,117 @@
+{% extends 'reviewapp/base.html' %}
+{% block title %}Submit Review | CineReviews{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+	<div class="col-lg-8">
+		<div class="review-card">
+			<div class="text-center mb-4">
+				<h3 class="text-warning">
+					<i class="fas fa-star me-2"></i>Share Your Review
+				</h3>
+				<p class="text-muted">Help others discover great movies with your honest review</p>
+			</div>
+			
+			<form method="post" class="vstack gap-4">
+				{% csrf_token %}
+				
+				{% if form.non_field_errors %}
+				<div class="alert alert-danger">
+					{{ form.non_field_errors }}
+				</div>
+				{% endif %}
+				
+				<div class="row">
+					<div class="col-md-6">
+						<label class="form-label text-light fw-semibold">
+							<i class="fas fa-star me-2 text-warning"></i>Your Rating
+						</label>
+						<div class="rating-input">
+							{{ form.stars }}
+						</div>
+						{% if form.stars.errors %}
+						<div class="text-danger small mt-1">{{ form.stars.errors }}</div>
+						{% endif %}
+					</div>
+				</div>
+				
+				<div>
+					<label class="form-label text-light fw-semibold">
+						<i class="fas fa-comment me-2 text-warning"></i>Your Review
+					</label>
+					<div class="mb-2">
+						{{ form.comment }}
+					</div>
+					{% if form.comment.errors %}
+					<div class="text-danger small">{{ form.comment.errors }}</div>
+					{% endif %}
+					<small class="text-muted">Share your thoughts about the movie, plot, acting, direction, or overall experience.</small>
+				</div>
+				
+				<div class="d-flex gap-3 justify-content-center">
+					<button type="submit" class="btn btn-custom px-4">
+						<i class="fas fa-save me-2"></i>Submit Review
+					</button>
+					<a href="{% url 'movie_detail' view.kwargs.pk %}" class="btn btn-outline-custom px-4">
+						<i class="fas fa-times me-2"></i>Cancel
+					</a>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<style>
+.rating-input select {
+	background: rgba(42, 42, 42, 0.9);
+	border: 2px solid var(--accent-gold);
+	color: #e0e0e0;
+	border-radius: 10px;
+	padding: 10px 15px;
+	font-size: 1.1rem;
+}
+
+.rating-input select:focus {
+	box-shadow: 0 0 15px rgba(245, 197, 24, 0.3);
+	border-color: var(--accent-gold);
+	background: rgba(42, 42, 42, 0.95);
+}
+
+textarea.form-control {
+	min-height: 120px !important;
+	resize: vertical;
+	background: rgba(42, 42, 42, 0.85) !important;
+	border: 1px solid #666 !important;
+	color: #d8d8d8 !important;
+	line-height: 1.6;
+	font-size: 0.95rem;
+}
+
+textarea.form-control:focus {
+	background: rgba(42, 42, 42, 0.9) !important;
+	border-color: var(--accent-gold) !important;
+	box-shadow: 0 0 12px rgba(245, 197, 24, 0.25) !important;
+	color: #e0e0e0 !important;
+}
+
+textarea.form-control::placeholder {
+	color: #999 !important;
+	font-style: italic;
+}
+
+.review-card {
+	background: var(--card-bg);
+	border: 1px solid #444;
+	border-radius: 15px;
+	padding: 30px;
+	box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.form-label {
+	color: #e0e0e0 !important;
+	font-weight: 500;
+	margin-bottom: 8px;
+}
+</style>
+
+{% endblock %}

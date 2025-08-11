@@ -1,0 +1,218 @@
+{% extends 'reviewapp/base.html' %}
+{% block title %}Discover Movies | CineReviews{% endblock %}
+{% block content %}
+
+<div class="hero-section">
+    <h1 class="display-4 fw-bold text-light mb-3">
+        <i class="fas fa-star text-warning me-3"></i>Discover Amazing Movies
+    </h1>
+    <p class="lead text-light-emphasis">Professional reviews, ratings, and recommendations</p>
+</div>
+
+<div class="row g-4">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3">
+        <div class="filter-card">
+            <h5 class="text-warning mb-4">
+                <i class="fas fa-filter me-2"></i>Filter Movies
+            </h5>
+            <form method="get" class="vstack gap-3">
+                <input type="hidden" name="q" value="{{ request.GET.q }}">
+                <div>
+                    <label class="form-label text-light fw-semibold">
+                        <i class="fas fa-theater-masks me-2"></i>Genre
+                    </label>
+                    <input name="genre" class="form-control" value="{{ request.GET.genre }}" placeholder="Action, Drama, Comedy...">
+                </div>
+                <div>
+                    <label class="form-label text-light fw-semibold">
+                        <i class="fas fa-calendar me-2"></i>Release Year
+                    </label>
+                    <input name="year" type="number" class="form-control" value="{{ request.GET.year }}" placeholder="2024" min="1900" max="2025">
+                </div>
+                <div>
+                    <label class="form-label text-light fw-semibold">
+                        <i class="fas fa-star me-2"></i>Minimum Rating
+                    </label>
+                    <select name="rating" class="form-select">
+                        <option value="">Any Rating</option>
+                        <option value="4" {% if request.GET.rating == '4' %}selected{% endif %}>4+ Stars</option>
+                        <option value="3" {% if request.GET.rating == '3' %}selected{% endif %}>3+ Stars</option>
+                        <option value="2" {% if request.GET.rating == '2' %}selected{% endif %}>2+ Stars</option>
+                        <option value="1" {% if request.GET.rating == '1' %}selected{% endif %}>1+ Stars</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label text-light fw-semibold">
+                        <i class="fas fa-sort me-2"></i>Sort By
+                    </label>
+                    <select name="sort" class="form-select">
+                        <option value="">Default</option>
+                        <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Highest Rated</option>
+                        <option value="release" {% if request.GET.sort == 'release' %}selected{% endif %}>Most Recent</option>
+                    </select>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-custom">
+                        <i class="fas fa-search me-2"></i>Apply Filters
+                    </button>
+                    <a href="{% url 'movie_list' %}" class="btn btn-outline-custom">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Top Picks Section -->
+        <div class="top-picks-card" style="margin-top: 20px;">
+            <h6 class="text-warning mb-3">
+                <i class="fas fa-fire me-2"></i>This Week's Hot Picks
+            </h6>
+            {% if top_picks_this_week %}
+            <div class="row g-2">
+                {% for pick in top_picks_this_week %}
+                <div class="col-12">
+                    <div class="pick-item">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                {% if pick.avg_rating %}
+                                    <span class="badge rating-badge">
+                                        <i class="fas fa-star me-1"></i>{{ pick.avg_rating|floatformat:1 }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-star me-1"></i>New
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <a href="{% url 'movie_detail' pick.pk %}" class="movie-title fw-bold">{{ pick.title }}</a>
+                                <div class="text-muted small">{{ pick.release_date.year }}</div>
+                            </div>
+                            <div>
+                                <a href="{% url 'movie_detail' pick.pk %}" class="btn btn-outline-custom btn-sm" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                <p>No movies released this week yet.<br>
+                <small>Check back later for fresh picks!</small></p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Movies Grid -->
+    <div class="col-lg-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="text-light">
+                <i class="fas fa-video me-2"></i>
+                {% if request.GET.q %}Search Results for "{{ request.GET.q }}"{% else %}All Movies{% endif %}
+                <span class="text-muted fs-6">({{ movies|length }} found)</span>
+            </h4>
+        </div>
+
+        {% if movies %}
+        <div class="row g-4">
+            {% for movie in movies %}
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="movie-card h-100">
+                    <div class="poster-container">
+                        {% if movie.poster %}
+                            <img src="{{ movie.poster.url }}" alt="{{ movie.title }}" class="poster-img">
+                        {% else %}
+                            <div class="d-flex align-items-center justify-content-center bg-secondary text-muted poster-img">
+                                <i class="fas fa-film fa-3x"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-body d-flex flex-column p-3">
+                        <h6 class="card-title mb-2">
+                            <a href="{% url 'movie_detail' movie.pk %}" class="movie-title">{{ movie.title }}</a>
+                        </h6>
+                        
+                        <div class="text-muted small mb-3">
+                            <i class="fas fa-calendar-alt me-1"></i>{{ movie.release_date|date:'Y' }}
+                        </div>
+                        
+                        {% if movie.genres.all %}
+                        <div class="mb-3">
+                            {% for genre in movie.genres.all %}
+                                <span class="genre-tag">{{ genre.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Rating badge moved to bottom -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            {% if movie.avg_rating %}
+                                <span class="rating-badge">
+                                    <i class="fas fa-star me-1"></i>{{ movie.avg_rating|floatformat:1 }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-star me-1"></i>No Rating
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <a href="{% url 'movie_detail' movie.pk %}" class="btn btn-outline-custom w-100">
+                                <i class="fas fa-eye me-2"></i>View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav class="mt-5">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.genre %}genre={{ request.GET.genre }}&{% endif %}{% if request.GET.year %}year={{ request.GET.year }}&{% endif %}{% if request.GET.rating %}rating={{ request.GET.rating }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.genre %}genre={{ request.GET.genre }}&{% endif %}{% if request.GET.year %}year={{ request.GET.year }}&{% endif %}{% if request.GET.rating %}rating={{ request.GET.rating }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.next_page_number }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-4x text-muted mb-4"></i>
+            <h5 class="text-light">No movies found</h5>
+            <p class="text-muted">Try adjusting your search criteria or browse all movies</p>
+            <a href="{% url 'movie_list' %}" class="btn btn-custom">
+                <i class="fas fa-home me-2"></i>Browse All Movies
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

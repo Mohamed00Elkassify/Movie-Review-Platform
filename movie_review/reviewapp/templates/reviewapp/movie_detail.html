@@ -1,0 +1,154 @@
+{% extends 'reviewapp/base.html' %}
+{% block title %}{{ movies.title }} | CineReviews{% endblock %}
+{% block content %}
+
+<div class="detail-hero">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="text-center">
+                {% if movies.poster %}
+                    <img src="{{ movies.poster.url }}" alt="{{ movies.title }} poster" class="poster-detail img-fluid">
+                {% else %}
+                    <div class="bg-secondary bg-opacity-25 rounded d-flex align-items-center justify-content-center poster-detail" style="height:500px;">
+                        <i class="fas fa-film fa-5x text-muted"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="mt-4 d-grid gap-3">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'submit_review' movies.pk %}" class="btn btn-custom">
+                            <i class="fas fa-star me-2"></i>Write / Edit Review
+                        </a>
+                        {% if in_watchlist %}
+                            <a href="{% url 'watchlist_toggle' movies.pk %}" class="watchlist-btn btn active">
+                                <i class="fas fa-bookmark me-2"></i>In Watchlist (Remove)
+                            </a>
+                        {% else %}
+                            <a href="{% url 'watchlist_toggle' movies.pk %}" class="btn btn-outline-custom">
+                                <i class="far fa-bookmark me-2"></i>Add to Watchlist
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline-custom">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login to Review
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="mb-3">
+                <h1 class="display-5 fw-bold text-light mb-2">{{ movies.title }}</h1>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="text-muted">
+                        <i class="fas fa-calendar-alt me-2"></i>{{ movies.release_date|date:'F j, Y' }}
+                    </span>
+                    <span class="rating-badge">
+                        <i class="fas fa-star me-1"></i>{{ avg_rating|floatformat:1 }}/5
+                    </span>
+                </div>
+                
+                {% if movies.genres.all %}
+                <div class="mb-4">
+                    {% for genre in movies.genres.all %}
+                        <span class="genre-tag">{{ genre.name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-4">
+                <h5 class="text-warning mb-3">
+                    <i class="fas fa-align-left me-2"></i>Description
+                </h5>
+                <p class="text-muted fst-italic mt-2">{{ movies.description }}</p>
+            </div>
+            
+            {% if movies.trailer_url %}
+            <div class="mb-4">
+                <a href="{{ movies.trailer_url }}" target="_blank" class="btn btn-outline-custom">
+                    <i class="fas fa-external-link-alt me-2"></i>Watch Trailer
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Reviews Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="text-light">
+                <i class="fas fa-comments me-2"></i>User Reviews
+                <span class="badge bg-secondary ms-2">{{ reviews.count }}</span>
+            </h3>
+            {% if user.is_authenticated %}
+            <a href="{% url 'submit_review' movies.pk %}" class="btn btn-custom">
+                <i class="fas fa-plus me-2"></i>Add Review
+            </a>
+            {% endif %}
+        </div>
+
+        {% if reviews %}
+            <div class="row g-4">
+                {% for review in reviews %}
+                <div class="col-lg-6">
+                    <div class="review-card">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-light mb-0 fw-semibold">{{ review.user.username }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>{{ review.created_at|date:'M j, Y' }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="rating-stars">
+                                {% for i in "12345"|slice:":" %}
+                                    {% if forloop.counter <= review.stars %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        {% if review.comment %}
+                        <blockquote class="mb-0 text-light-emphasis">
+                            <i class="fas fa-quote-left text-warning me-2"></i>
+                            {{ review.comment }}
+                            <i class="fas fa-quote-right text-warning ms-2"></i>
+                        </blockquote>
+                        {% else %}
+                        <p class="text-muted mb-0 fst-italic">No written review</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="review-card text-center py-5">
+                <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                <h5 class="text-light mb-2">No reviews yet</h5>
+                <p class="text-muted mb-4">Be the first to share your thoughts about this movie!</p>
+                {% if user.is_authenticated %}
+                <a href="{% url 'submit_review' movies.pk %}" class="btn btn-custom">
+                    <i class="fas fa-star me-2"></i>Write First Review
+                </a>
+                {% else %}
+                <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline-custom">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login to Review
+                </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

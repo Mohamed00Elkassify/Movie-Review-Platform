@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import FormView, ListView, DetailView, View
 from .forms import RegisterForm, RatingForm
 from django.urls import reverse_lazy
@@ -11,7 +11,7 @@ from datetime import date, timedelta
 class RegisterView(FormView):
     template_name = 'registration/signup.html'
     form_class = RegisterForm
-    succes_url = reverse_lazy('login')
+    success_url = reverse_lazy('login')
 
     def form_valid(self, form):
         form.save()
@@ -29,10 +29,10 @@ class MovieListView(ListView):
     model = Movie
     context_object_name = 'movies'
     template_name = 'reviewapp/movie_list.html'
-    paginate_by = 15
+    paginate_by = 8
 
     def get_queryset(self):
-        qs = Movie.objects.all()
+        qs = Movie.objects.annotate(avg_rating=Avg('rating__stars'))
         genre = self.request.GET.get('genre')
         year = self.request.GET.get('year') 
         rating = self.request.GET.get('rating')         
@@ -46,9 +46,9 @@ class MovieListView(ListView):
         if year:
             qs = qs.filter(release_date__year=year)
         if rating:
-            qs = qs.annotate(avg_rating=Avg('rating__stars')).filter(avg_rating__gte=rating)
+            qs = qs.filter(avg_rating__gte=rating)
         if sort == 'rating':
-            qs = qs.annotate(avg_rating=Avg('rating__stars')).order_by('-avg_rating')
+            qs = qs.order_by('-avg_rating')
         elif sort == 'release':
             qs = qs.order_by('-release_date')
 
@@ -57,12 +57,12 @@ class MovieListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         today = date.today()
-        startweek = today - timedelta(days=today.weekday())
-        endweek = startweek + timedelta(days=6)
+        recent_date = today - timedelta(days=7)
+        # Get top-rated movies released this week
         context['top_picks_this_week'] = (
-            Movie.objects.filter(
-                release_date__range=(startweek, endweek)
-            ).annotate(avg_rating=Avg('rating__stars')).order_by('-avg_rating')[:5]
+            Movie.objects.filter(rating__created_at__gte=recent_date)
+            .annotate(avg_rating=Avg('rating__stars'))
+            .order_by('-avg_rating')[:5]
         )
         return context
     
@@ -81,7 +81,7 @@ class MovieDetailView(DetailView):
         movie = self.get_object()
         reviews = Rating.objects.filter(movie=movie)
         context['reviews'] = reviews
-        context['avg_rating'] = reviews.aggregate(Avg('stars')) or 0
+        context['avg_rating'] = reviews.aggregate(avg=Avg('stars')).get('avg') or 0
         if self.request.user.is_authenticated:
             context['review_form'] = RatingForm(
                 instance=Rating.objects.filter(user=self.request.user, movie=movie).first()
@@ -118,17 +118,16 @@ class SubmitReviewView(LoginRequiredMixin, FormView):
             existing_review.comment = form.cleaned_data['comment']
             existing_review.save()
         else:
-            new_review = Rating(
+            Rating.objects.create(
                 user=self.request.user,
                 movie=movie,
                 stars=form.cleaned_data['stars'],
                 comment=form.cleaned_data['comment']
             )
-            new_review.save()
-        return super().form_valid(form)
+        return redirect('movie_detail', pk=movie.pk)
 
 
-class WatchlistToggleview(LoginRequiredMixin, View):
+class WatchlistToggleView(LoginRequiredMixin, View):
     """
     View to toggle a movie's presence in the user's watchlist.
 
@@ -149,6 +148,7 @@ class WatchlistToggleview(LoginRequiredMixin, View):
             existing_entry.delete()
         else:
             Watchlist.objects.create(user=self.request.user, movie=movie)
+        return redirect('movie_detail', pk=movie.pk)
 
 class WatchlistView(LoginRequiredMixin, ListView):
     """
